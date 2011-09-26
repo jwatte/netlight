@@ -4,6 +4,7 @@
 #include "NetLight.h"
 
 #pragma comment(lib, "netlight.lib")
+#pragma warning(disable: 4996)
 
 HINSTANCE ghInst;
 ATOM aWClass;
@@ -11,11 +12,28 @@ HWND hwMain;
 NetLight *nl;
 HBRUSH brWhite;
 HFONT fStatus;
+HCURSOR cArrow;
 bool dirty;
 
 double startStep;
 double prevStep;
+int stepno = 0;
+bool gamerunning = false;
+Connection *c;
 
+
+void ConnectToServer(char const *name) {
+    //  netlight port for pong is 5718, let's say!
+    nl = ::OpenNetLightClient(name, 5718);
+    if (nl != NULL) {
+        c = nl->getNewConnection();
+        if (!c) {
+            //  refused to connect?
+            nl->shutdown();
+            nl = NULL;
+        }
+    }
+}
 
 double readTime() {
     unsigned long long li = 0, pf = 0;
@@ -41,6 +59,23 @@ void StartGame() {
 }
 
 void StepGame() {
+    Packet *p = 0;
+    while ((p = nl->receivePacketFromConnection(c)) != 0) {
+        //  deal with packet
+        nl->destroyPacket(p);
+    }
+    if (!nl->connectionIsAlive(c)) {
+        nl->destroyConnection(c);
+        c = NULL;
+        nl->shutdown();
+        nl = NULL;
+    }
+    if (!c) {
+        return;
+    }
+    if (!gamerunning) {
+        return;
+    }
     double t = readTime();
     //  30 fps
     while (t - prevStep > 0.033) {
@@ -51,6 +86,13 @@ void StepGame() {
             prevStep = prevStep + 0.033;
         }
         //  update physics
+        ++stepno;
+        if (!(stepno & 31)) {
+            char buf[30];
+            //  I'm using text packets here. However, I could just as well use binary packets (a struct, say)
+            sprintf(buf, "step %d", stepno);
+            nl->sendPacketToAllConnections(buf, strlen(buf));
+        }
     }
 }
 
@@ -75,6 +117,10 @@ LRESULT CALLBACK MyWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 else {
                 }
                 ::EndPaint(hwnd, &ps);
+            }
+            return 0;
+        case WM_MOUSEMOVE: {
+                ::SetCursor(cArrow);
             }
             return 0;
         case WM_CLOSE: {
@@ -104,21 +150,21 @@ void CreateClass() {
     wcex.hIconSm = ::LoadIconW(ghInst, L"IconSm");
     wcex.hInstance = ghInst;
     wcex.lpfnWndProc = &MyWndProc;
-    wcex.lpszClassName = L"Pong Server Class";
+    wcex.lpszClassName = L"Pong Client Class";
     wcex.style = CS_OWNDC;
     aWClass = ::RegisterClassExW(&wcex);
     brWhite = ::CreateSolidBrush(RGB(255, 255, 255));
     fStatus = ::CreateFontW(-12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FF_SWISS, L"Verdana");
+    cArrow = ::LoadCursor(NULL, IDC_ARROW);
 }
 
 void OpenWindow() {
-    hwMain = ::CreateWindowExW(WS_EX_APPWINDOW, (wchar_t const *)aWClass, L"Pong Server", WS_OVERLAPPEDWINDOW, 100, 100, 600, 400, 0, 0, ghInst, 0);
+    hwMain = ::CreateWindowExW(WS_EX_APPWINDOW, (wchar_t const *)aWClass, L"Pong Client", WS_OVERLAPPEDWINDOW, 100, 100, 600, 400, 0, 0, ghInst, 0);
     ::ShowWindow(hwMain, SW_NORMAL);
 }
 
 void Run() {
-    //  netlight port for pong is 5718, let's say!
-    nl = ::OpenNetLightClient("localhost", 5718);
+    ConnectToServer("localhost");
     MSG msg;
     StartGame();
     while (::GetMessageW(&msg, 0, 0, 0)) {

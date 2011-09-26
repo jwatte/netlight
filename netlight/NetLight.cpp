@@ -66,7 +66,7 @@ struct Connection {
             }
             else {
                 int err = WSAGetLastError();
-                if (err == WSAEINPROGRESS || err == WSAEWOULDBLOCK) {
+                if (err == WSAEINPROGRESS || err == WSAEWOULDBLOCK || err == 0) {
                     //  do nothing
                 }
                 else {
