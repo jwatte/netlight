@@ -8,6 +8,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "server", "samples\pong\serv
 		{AE42E88C-2F3A-4C9F-93DD-75638725ADF2} = {AE42E88C-2F3A-4C9F-93DD-75638725ADF2}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "client", "samples\pong\client\client.vcxproj", "{D4D6EF22-7319-4D1C-8805-F2186B618B90}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -22,6 +24,10 @@ Global
 		{12E16EE6-8261-4D1D-B9D5-B392214A46AA}.Debug|Win32.Build.0 = Debug|Win32
 		{12E16EE6-8261-4D1D-B9D5-B392214A46AA}.Release|Win32.ActiveCfg = Release|Win32
 		{12E16EE6-8261-4D1D-B9D5-B392214A46AA}.Release|Win32.Build.0 = Release|Win32
+		{D4D6EF22-7319-4D1C-8805-F2186B618B90}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D4D6EF22-7319-4D1C-8805-F2186B618B90}.Debug|Win32.Build.0 = Debug|Win32
+		{D4D6EF22-7319-4D1C-8805-F2186B618B90}.Release|Win32.ActiveCfg = Release|Win32
+		{D4D6EF22-7319-4D1C-8805-F2186B618B90}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

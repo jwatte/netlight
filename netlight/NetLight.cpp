@@ -22,6 +22,7 @@ HINSTANCE ghInst;
 
 NETLIGHT_API BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
     ghInst = hinstDLL;
+    return TRUE;
 }
 
 struct Packet {
@@ -110,6 +111,7 @@ struct Connection {
             }
             //  else break out
         }
+        return 0;
     }
     Connection() {
         h_ = INVALID_HANDLE_VALUE;
@@ -146,6 +148,17 @@ class NetLightImpl : public NetLight {
 public:
     NetLightImpl() {
         acceptSocket_ = INVALID_HANDLE_VALUE;
+    }
+    ~NetLightImpl() {
+        for (std::list<Connection *>::iterator ptr(inConnections_.begin()), end(inConnections_.end()); ptr != end; ++ptr) {
+            delete *ptr;
+        }
+        for (std::list<Connection *>::iterator ptr(activeConnections_.begin()), end(activeConnections_.end()); ptr != end; ++ptr) {
+            delete *ptr;
+        }
+        if (acceptSocket_ != INVALID_HANDLE_VALUE) {
+            ::closesocket((SOCKET)acceptSocket_);
+        }
     }
     virtual Connection *getNewConnection() {
         if (inConnections_.empty()) {
@@ -261,6 +274,11 @@ NETLIGHT_API NetLight * OpenNetLightServer(unsigned short port) {
 
     u_long dw = -1;
     if (::ioctlsocket(s, FIONBIO, &dw) < 0) {
+        ::closesocket(s);
+        return 0;
+    }
+
+    if (::setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char const *)&dw, sizeof(dw)) < 0) {
         ::closesocket(s);
         return 0;
     }

@@ -35,6 +35,7 @@ void MakeDirty() {
 }
 
 void StartGame(Game *g) {
+    MakeDirty();
     games.push_back(g);
     nl->sendPacketToConnection("start", 5, g->a);
     nl->sendPacketToConnection("start", 5, g->b);
@@ -52,6 +53,22 @@ void CheckNewConnections() {
         else {
             next = new Game();
             next->a = c;
+            MakeDirty();
+        }
+    }
+    if (next != 0) {
+        Packet *p = nl->receivePacketFromConnection(next->a);
+        if (p != 0) {
+            //  sending packets before connecting? destroy!
+            nl->destroyPacket(p);
+            goto dumb_client_is_dumb;
+        }
+        else if (!nl->connectionIsAlive(next->a)) {
+    dumb_client_is_dumb:
+            nl->destroyConnection(next->a);
+            delete next;
+            next = NULL;
+            MakeDirty();
         }
     }
 }
@@ -61,52 +78,56 @@ void UpdateGames() {
         //  Forward one packet per client per tick, to limit tick rate.
         //  Also limit size of each packet forwarded so that attempts to flood don't work.
         Game *g = *ptr;
-        if (g->a == 0 || g->b == 0) {
-            //  nothing to do
-            return;
-        }
-        if (!nl->connectionIsAlive(g->a)) {
-            nl->destroyConnection(g->a);
-            g->a = 0;
-            if (g->b) {
-                nl->sendPacketToConnection("drop", 4, g->b);
+        if (g->a) {
+            if (!nl->connectionIsAlive(g->a)) {
+                nl->destroyConnection(g->a);
+                g->a = 0;
+                MakeDirty();
+                if (g->b) {
+                    nl->sendPacketToConnection("drop", 4, g->b);
+                }
+            }
+            else {
+                //  read packet and forward
+                Packet *p = nl->receivePacketFromConnection(g->a);
+                if (p != 0) {
+                    if (nl->packetSize(p) < 64 && g->b != 0) {
+                        nl->sendPacketToConnection(nl->packetData(p), nl->packetSize(p), g->b);
+                    }
+                    else {
+                        //  guy is bad, drop him!
+                        nl->destroyConnection(g->a);
+                        g->a = 0;
+                        MakeDirty();
+                    }
+                    nl->destroyPacket(p);
+                }
             }
         }
-        else {
-            //  read packet and forward
-            Packet *p = nl->receivePacketFromConnection(g->a);
-            if (p != 0) {
-                if (nl->packetSize(p) < 64 && g->b != 0) {
-                    nl->sendPacketToConnection(nl->packetData(p), nl->packetSize(p), g->b);
+        if (g->b) {
+            if (!nl->connectionIsAlive(g->b)) {
+                nl->destroyConnection(g->b);
+                g->b = 0;
+                MakeDirty();
+                if (g->a) {
+                    nl->sendPacketToConnection("drop", 4, g->a);
                 }
-                else {
-                    //  guy is bad, drop him!
-                    nl->destroyConnection(g->a);
-                    g->a = 0;
-                }
-                nl->destroyPacket(p);
             }
-        }
-        if (!nl->connectionIsAlive(g->b)) {
-            nl->destroyConnection(g->b);
-            g->b = 0;
-            if (g->a) {
-                nl->sendPacketToConnection("drop", 4, g->a);
-            }
-        }
-        else {
-            //  read packet and forward
-            Packet *p = nl->receivePacketFromConnection(g->b);
-            if (p != 0) {
-                if (nl->packetSize(p) < 64 && g->a != 0) {
-                    nl->sendPacketToConnection(nl->packetData(p), nl->packetSize(p), g->a);
+            else {
+                //  read packet and forward
+                Packet *p = nl->receivePacketFromConnection(g->b);
+                if (p != 0) {
+                    if (nl->packetSize(p) < 64 && g->a != 0) {
+                        nl->sendPacketToConnection(nl->packetData(p), nl->packetSize(p), g->a);
+                    }
+                    else {
+                        //  guy is bad, drop him!
+                        nl->destroyConnection(g->b);
+                        g->b = 0;
+                        MakeDirty();
+                    }
+                    nl->destroyPacket(p);
                 }
-                else {
-                    //  guy is bad, drop him!
-                    nl->destroyConnection(g->b);
-                    g->b = 0;
-                }
-                nl->destroyPacket(p);
             }
         }
     }
@@ -118,6 +139,7 @@ void RemoveEmptyGames() {
         Game *g = *ptr;
          ++ptr;
          if (g->a == 0 && g->b == 0) {
+            MakeDirty();
             games.erase(del);
             delete g;
          }
@@ -136,12 +158,30 @@ LRESULT CALLBACK MyWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 HDC dc = ::BeginPaint(hwnd, &ps);
                 ::SelectObject(dc, fStatus);
                 ::SelectObject(dc, brWhite);
+                ::SetTextColor(dc, RGB(255, 255, 255));
+                ::SetBkColor(dc, RGB(0, 0, 0));
                 if (!nl) {
                     wchar_t const *str = L"Error opening server port.";
                     ::TextOutW(dc, 10, 10, str, wcslen(str));
                 }
                 else {
-                    
+                    wchar_t const *str = L"Listening on port 5718";
+                    ::TextOutW(dc, 10, 10, str, wcslen(str));
+                    if (next) {
+                        str = L"Next game:";
+                        ::TextOutW(dc, 10, 27, str, wcslen(str));
+                        char const *addr = nl->getConnectionAddress(next->a);
+                        ::TextOutA(dc, 300, 27, addr, strlen(addr));
+                    }
+                    int y = 47;
+                    for (std::list<Game *>::iterator ptr(games.begin()), end(games.end()); ptr != end; ++ptr) {
+                        Game *g = *ptr;
+                        char const *addr = g->a ? nl->getConnectionAddress(g->a) : "";
+                        char const *bddr = g->b ? nl->getConnectionAddress(g->b) : "";
+                        ::TextOutA(dc, 10, y, addr, strlen(addr));
+                        ::TextOutA(dc, 300, y, bddr, strlen(bddr));
+                        y += 17;
+                    }
                 }
                 ::EndPaint(hwnd, &ps);
             }
@@ -155,7 +195,7 @@ LRESULT CALLBACK MyWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             }
             break;
         case WM_TIMER: {
-                if (nl != NULL) {
+                if (nl != 0) {
                     CheckNewConnections();
                     UpdateGames();
                     RemoveEmptyGames();
@@ -184,6 +224,7 @@ void CreateClass() {
 
 void OpenWindow() {
     hwMain = ::CreateWindowExW(WS_EX_APPWINDOW, (wchar_t const *)aWClass, L"Pong Server", WS_OVERLAPPEDWINDOW, 100, 100, 600, 400, 0, 0, ghInst, 0);
+    ::ShowWindow(hwMain, SW_NORMAL);
 }
 
 void Run()
@@ -202,5 +243,8 @@ int WINAPI WinMain(HINSTANCE me, HINSTANCE x, LPSTR cmdline, int cmdShow) {
     CreateClass();
     OpenWindow();
     Run();
+    if (nl != 0) {
+        nl->shutdown();
+    }
     return 0;
 }
