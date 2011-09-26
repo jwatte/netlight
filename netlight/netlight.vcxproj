@@ -39,9 +39,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -55,6 +57,21 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <CustomBuildStep>
+      <Command>copy $(TargetPath) $(SolutionDir)download\netlight.dll</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Copying to download directory</Message>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>$(SolutionDir)download\netlight.dll</Outputs>
+    </CustomBuildStep>
+    <PreLinkEvent>
+      <Command>copy $(SolutionDir)netlight\NetLight.h $(SolutionDir)download\NetLight.h</Command>
+    </PreLinkEvent>
+    <PreLinkEvent>
+      <Message>Copying header file</Message>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -72,6 +89,15 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <CustomBuildStep>
+      <Command>copy $(TargetPath) $(SolutionDir)download\netlight.dll</Command>
+      <Message>Copying to download directory</Message>
+      <Outputs>$(SolutionDir)download\netlight.dll</Outputs>
+    </CustomBuildStep>
+    <PreLinkEvent>
+      <Command>copy $(SolutionDir)netlight\NetLight.h $(SolutionDir)download\NetLight.h</Command>
+      <Message>Copying header file</Message>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Netlight.h" />
