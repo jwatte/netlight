@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <vector>
 
+#pragma warning(disable: 4996)
+#pragma comment(lib, "ws2_32.lib")
+
 HINSTANCE ghInst;
 
 NETLIGHT_API BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
@@ -66,7 +69,7 @@ struct Connection {
             }
         }
         if (outBuf_.size() > 0 && alive()) {
-            int i = ::send((SOCKET)s, &outBuf_[0], outBuf_.size(), 0);
+            int i = ::send((SOCKET)h_, &outBuf_[0], outBuf_.size(), 0);
             if (i > 0) {
                 outBuf_.erase(outBuf_.begin(), outBuf_.begin() + i);
             }
