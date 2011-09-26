@@ -11,18 +11,18 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{AE42E88C-2F3A-4C9F-93DD-75638725ADF2}</ProjectGuid>
+    <ProjectGuid>{12E16EE6-8261-4D1D-B9D5-B392214A46AA}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>netlight</RootNamespace>
+    <RootNamespace>server</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
@@ -39,11 +39,9 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -51,37 +49,14 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;NETLIGHT_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)download</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)download</AdditionalLibraryDirectories>
     </Link>
-    <CustomBuildStep>
-      <Command>copy $(TargetPath) $(SolutionDir)download\netlight.dll</Command>
-    </CustomBuildStep>
-    <CustomBuildStep>
-      <Message>Copying to download directory</Message>
-    </CustomBuildStep>
-    <CustomBuildStep>
-      <Outputs>$(SolutionDir)download\netlight.dll</Outputs>
-    </CustomBuildStep>
-    <PreLinkEvent>
-      <Command>copy $(SolutionDir)netlight\NetLight.h $(SolutionDir)download\NetLight.h</Command>
-    </PreLinkEvent>
-    <PreLinkEvent>
-      <Message>Copying header file</Message>
-    </PreLinkEvent>
-    <PostBuildEvent>
-      <Command>copy $(TargetDir)$(TargetName).lib $(SolutionDir)download</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>Copying link library</Message>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -91,9 +66,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;NETLIGHT_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)download</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -102,27 +76,14 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(SolutionDir)download</AdditionalLibraryDirectories>
     </Link>
-    <CustomBuildStep>
-      <Command>copy $(TargetPath) $(SolutionDir)download\netlight.dll</Command>
-      <Message>Copying to download directory</Message>
-      <Outputs>$(SolutionDir)download\netlight.dll</Outputs>
-    </CustomBuildStep>
-    <PreLinkEvent>
-      <Command>copy $(SolutionDir)netlight\NetLight.h $(SolutionDir)download\NetLight.h</Command>
-      <Message>Copying header file</Message>
-    </PreLinkEvent>
-    <PostBuildEvent>
-      <Command>copy $(TargetDir)$(TargetName).lib $(SolutionDir)download</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>Copying link library</Message>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Netlight.h" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NetLight.cpp" />
+    <ProjectReference Include="..\..\..\netlight\netlight.vcxproj">
+      <Project>{ae42e88c-2f3a-4c9f-93dd-75638725adf2}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

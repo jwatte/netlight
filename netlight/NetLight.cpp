@@ -12,6 +12,12 @@
 #pragma warning(disable: 4996)
 #pragma comment(lib, "ws2_32.lib")
 
+//  Max packet size is length field plus the actual payload (which really maxes out at 65535 because we allow 0-length packets)
+#define MAX_PACKET_SIZE (sizeof(short)+65536UL)
+//  max amount of data I allow to be buffered -- if more than this, then 
+//  the client will be dropped (output) or pended (input)
+#define MAX_BUFFER_SIZE (2*MAX_PACKET_SIZE)
+
 HINSTANCE ghInst;
 
 NETLIGHT_API BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
@@ -50,9 +56,9 @@ struct Connection {
     }
     void poll() {
     again:
-        if (inBuf_.size() < 1024*1024 && alive()) {
-            char buf[65538];
-            int r = ::recv((SOCKET)h_, buf, 65538, 0);
+        if (inBuf_.size() < MAX_BUFFER_SIZE && alive()) {
+            char buf[MAX_PACKET_SIZE];
+            int r = ::recv((SOCKET)h_, buf, MAX_PACKET_SIZE, 0);
             if (r > 0) {
                 inBuf_.insert(inBuf_.end(), &buf[0], &buf[r]);
                 goto again;
@@ -86,16 +92,24 @@ struct Connection {
         }
     }
     Packet *receivePacket() {
-        if (inBuf_.size() < sizeof(short)) {
-            return 0;
+        for (int i = 0; i < 2; ++i) {
+            Packet *r = 0;
+            if (inBuf_.size() < sizeof(short)) {
+                goto dopoll;
+            }
+            unsigned short size = inBuf_[0] + inBuf_[1] * 256;
+            if (inBuf_.size() < size + sizeof(short)) {
+                goto dopoll;
+            }
+            r = new Packet(this, &inBuf_[sizeof(short)], size);
+            inBuf_.erase(inBuf_.begin(), inBuf_.begin() + sizeof(short) + size);
+            return r;
+        dopoll:
+            if (i == 0) {
+                poll();
+            }
+            //  else break out
         }
-        unsigned short size = inBuf_[0] + inBuf_[1] * 256;
-        if (inBuf_.size() < size + sizeof(short)) {
-            return 0;
-        }
-        Packet *r = new Packet(this, &inBuf_[sizeof(short)], size);
-        inBuf_.erase(inBuf_.begin(), inBuf_.begin() + sizeof(short) + size);
-        return r;
     }
     Connection() {
         h_ = INVALID_HANDLE_VALUE;
@@ -134,9 +148,11 @@ public:
         acceptSocket_ = INVALID_HANDLE_VALUE;
     }
     virtual Connection *getNewConnection() {
-        poll();
         if (inConnections_.empty()) {
-            return 0;
+            poll(); //  this means, don't deliver packets while connections are pending
+            if (inConnections_.empty()) {
+                return 0;
+            }
         }
         Connection *r = inConnections_.front();
         activeConnections_.push_back(r);
@@ -154,7 +170,7 @@ public:
         activeConnections_.erase(std::find(activeConnections_.begin(), activeConnections_.end(), c));
     }
     virtual void sendPacketToConnection(void const *data, unsigned short size, Connection *c) {
-        if (c->outBuf_.size() >= 65538 || !c->alive()) {
+        if (c->outBuf_.size() >= MAX_BUFFER_SIZE || !c->alive()) {
             c->close();
             return;
         }
@@ -210,10 +226,6 @@ public:
                 Connection *c = new Connection((HANDLE)s, addr, alen);
                 inConnections_.push_back(c);
             }
-        }
-        for (std::list<Connection *>::iterator ptr(activeConnections_.begin()), end(activeConnections_.end());
-            ptr != end; ++ptr) {
-            (*ptr)->poll();
         }
     }
 };
