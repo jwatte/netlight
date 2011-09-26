@@ -34,3 +34,5 @@ To use it in a client, call OpenNetLightServer(char const *host, unsigned short 
 There are some samples in samples\pong (a client and a server), although they are not yet a full game.
 
 Please let me know whether this works for you at all -- "release early, gather feedback" is the mantra I'm going for here.
+
+Version 1.0 is under BSD license. I might as well :-)
