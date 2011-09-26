@@ -17,7 +17,7 @@ bool dirty;
 
 double startStep;
 double prevStep;
-int stepno = 0;
+int stepno = 0, remoteStepno = 0;
 bool gamerunning = false;
 Connection *c;
 
@@ -56,15 +56,36 @@ void MakeDirty() {
 void StartGame() {
     startStep = readTime();
     prevStep = startStep;
+    gamerunning = true;
+}
+
+void Dispatch(char const *data) {
+    if (!strcmp(data, "start")) {
+        StartGame();
+    }
+    else if (!strcmp(data, "drop")) {
+        //  other game dropped
+        nl->destroyConnection(c);
+        c = NULL;
+        return;
+    }
+    else if (!strncmp(data, "step ", 5)) {
+        //  whatever
+        remoteStepno = atoi(&data[5]);
+    }
+    else {
+        //  unknown packet
+    }
 }
 
 void StepGame() {
     Packet *p = 0;
-    while ((p = nl->receivePacketFromConnection(c)) != 0) {
-        //  deal with packet
+    while (c != 0 && (p = nl->receivePacketFromConnection(c)) != 0) {
+        //  deal with packet -- it's guaranteed to have a 0 at the end (!)
+        Dispatch((char const *)nl->packetData(p));
         nl->destroyPacket(p);
     }
-    if (!nl->connectionIsAlive(c)) {
+    if (c && !nl->connectionIsAlive(c)) {
         nl->destroyConnection(c);
         c = NULL;
         nl->shutdown();
@@ -114,7 +135,20 @@ LRESULT CALLBACK MyWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
                     wchar_t const *str = L"Error connecting to server.";
                     ::TextOutW(dc, 10, 10, str, wcslen(str));
                 }
+                else if (!c) {
+                    wchar_t const *str = L"Remote client disconnected.";
+                    ::TextOutW(dc, 10, 10, str, wcslen(str));
+                }
                 else {
+                    if (!gamerunning) {
+                        wchar_t const *str = L"Waiting for game start.";
+                        ::TextOutW(dc, 10, 10, str, wcslen(str));
+                    }
+                    else {
+                        char buf[100];
+                        sprintf(buf, "step %d remote %d", stepno, remoteStepno);
+                        ::TextOutA(dc, 10, 10, buf, strlen(buf));
+                    }
                 }
                 ::EndPaint(hwnd, &ps);
             }
@@ -134,6 +168,7 @@ LRESULT CALLBACK MyWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         case WM_TIMER: {
                 if (nl != 0) {
                     StepGame();
+                    MakeDirty();
                 }
             }
             return 0;
